@@ -1,6 +1,7 @@
 package skiplist_test
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/yzx9/skiplist"
@@ -71,9 +72,10 @@ func BenchmarkSkipListGet100000(b *testing.B) { benchmarkSkipListGet(b, 100000) 
 
 func benchmarkSkipListGet(b *testing.B, n int) {
 	list := skiplist.New[int, int]()
-	for i := 0; i < 100; i++ {
-		v := i
-		list.Insert(i, &v)
+	for i := 0; i < n; i++ {
+		k := rand.Intn(i + 1)
+		v := k
+		list.Insert(k, &v)
 	}
 
 	b.ResetTimer()
