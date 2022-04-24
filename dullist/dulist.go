@@ -7,7 +7,8 @@ import (
 )
 
 type DulList[K skiplist.Ordered, V any] struct {
-	head *dulListNode[K, V]
+	head  dulListNode[K, V]
+	count int
 }
 
 type dulListNode[K skiplist.Ordered, V any] struct {
@@ -20,59 +21,41 @@ type dulListNode[K skiplist.Ordered, V any] struct {
 var KeyNotExist = fmt.Errorf("key not exist")
 
 func New[K skiplist.Ordered, V any]() *DulList[K, V] {
-	return &DulList[K, V]{head: nil}
+	return &DulList[K, V]{
+		head: dulListNode[K, V]{},
+	}
 }
 
 func (l *DulList[K, V]) Insert(key K, val *V) {
-	if l.head == nil {
-		l.head = &dulListNode[K, V]{
-			key:  key,
-			val:  val,
-			prev: nil,
-			next: nil,
-		}
-		return
-	}
-
-	if l.head.key > key {
-		l.head = &dulListNode[K, V]{
-			key:  key,
-			val:  val,
-			prev: nil,
-			next: l.head,
-		}
-		l.head.next.prev = l.head
-		return
-	}
-
-	node := l.head
+	// search
+	node := &l.head
 	for node.next != nil && node.next.key < key {
 		node = node.next
 	}
 
+	// update value if exist
+	if node.next != nil && node.next.key == key {
+		node.next.val = val
+		return
+	}
+
+	// insert new node
+	l.count++
+	next := node.next
 	node.next = &dulListNode[K, V]{
 		key:  key,
 		val:  val,
 		prev: node,
-		next: node.next,
+		next: next,
 	}
-	if node.next.next != nil {
-		node.next.next.prev = node.next
+	if next != nil {
+		next.prev = node.next
 	}
-	return
 }
 
 func (l *DulList[K, V]) Delete(key K) error {
-	if l.head == nil || l.head.key > key {
-		return KeyNotExist
-	}
-
-	if l.head.key == key {
-		l.head = l.head.next
-		return nil
-	}
-
-	node := l.head
+	// search
+	node := &l.head
 	for node.next != nil && node.next.key < key {
 		node = node.next
 	}
@@ -81,20 +64,18 @@ func (l *DulList[K, V]) Delete(key K) error {
 		return KeyNotExist
 	}
 
+	// delete
+	l.count--
 	node.next = node.next.next
+	if node.next != nil {
+		node.next.prev = node
+	}
 	return nil
 }
 
 func (l *DulList[K, V]) Get(key K) (*V, error) {
-	if l.head == nil || l.head.key > key {
-		return nil, KeyNotExist
-	}
-
-	if l.head.key == key {
-		return l.head.val, nil
-	}
-
-	node := l.head
+	//search
+	node := &l.head
 	for node.next != nil && node.next.key < key {
 		node = node.next
 	}
@@ -105,3 +86,5 @@ func (l *DulList[K, V]) Get(key K) (*V, error) {
 
 	return node.next.val, nil
 }
+
+func (l DulList[K, V]) Count() int { return l.count }
