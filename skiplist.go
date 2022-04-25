@@ -15,7 +15,6 @@ type skipListNode[K Ordered, V any] struct {
 	key   K
 	val   *V
 	level int
-	prev  []*skipListNode[K, V]
 	next  []*skipListNode[K, V]
 }
 
@@ -35,10 +34,12 @@ func New[K Ordered, V any]() *SkipList[K, V] {
 func (list *SkipList[K, V]) Insert(key K, val *V) {
 	// search
 	node := &list.head
-	for i := node.level - 1; i >= 0; i-- {
+	prevNodes := make([]*skipListNode[K, V], list.head.level)
+	for i := list.head.level - 1; i >= 0; i-- {
 		for node.next[i] != nil && node.next[i].key < key {
 			node = node.next[i]
 		}
+		prevNodes[i] = node
 	}
 
 	// update value if exist
@@ -59,31 +60,23 @@ func (list *SkipList[K, V]) Insert(key K, val *V) {
 		key:   key,
 		val:   val,
 		level: level,
-		prev:  make([]*skipListNode[K, V], level),
 		next:  make([]*skipListNode[K, V], level),
 	}
-	for i := 0; i < level; i++ {
-		for node.level-1 < i {
-			node = node.prev[node.level-1]
-		}
-
-		next := node.next[i]
-		newNode.prev[i] = node
-		newNode.next[i] = next
-		node.next[i] = newNode
-		if next != nil {
-			next.prev[i] = newNode
-		}
+	for i := 0; i < level && i < len(prevNodes); i++ {
+		newNode.next[i] = prevNodes[i].next[i]
+		prevNodes[i].next[i] = newNode
 	}
 }
 
 func (list *SkipList[K, V]) Delete(key K) error {
 	// search
 	node := &list.head
-	for i := node.level - 1; i >= 0; i-- {
+	prevNodes := make([]*skipListNode[K, V], list.head.level)
+	for i := list.head.level - 1; i >= 0; i-- {
 		for node.next[i] != nil && node.next[i].key < key {
 			node = node.next[i]
 		}
+		prevNodes[i] = node
 	}
 
 	if node.next[0] == nil || node.next[0].key != key {
@@ -94,10 +87,7 @@ func (list *SkipList[K, V]) Delete(key K) error {
 	list.count--
 	node = node.next[0]
 	for i := 0; i < node.level; i++ {
-		node.prev[i].next[i] = node.next[i]
-		if node.next[i] != nil {
-			node.next[i].prev[i] = node.prev[i]
-		}
+		prevNodes[i].next[i] = node.next[i]
 	}
 	return nil
 }
